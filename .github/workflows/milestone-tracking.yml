@@ -1,0 +1,45 @@
+# .github/workflows/milestone-tracking.yml
+name: Milestone Tracking
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Daily
+
+jobs:
+  track-milestones:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check milestone progress
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const milestones = await github.rest.issues.listMilestones({
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              state: 'open'
+            });
+            
+            for (const milestone of milestones.data) {
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                milestone: milestone.number,
+                state: 'all'
+              });
+              
+              const total = issues.data.length;
+              const closed = issues.data.filter(i => i.state === 'closed').length;
+              const progress = (closed / total * 100).toFixed(2);
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.name,
+                issue_number: milestone.number,
+                body: `## 📈 Milestone Progress Update
+                
+                - Progress: ${progress}%
+                - Completed: ${closed}/${total} issues
+                - Due date: ${milestone.due_on}
+                `
+              });
+            }

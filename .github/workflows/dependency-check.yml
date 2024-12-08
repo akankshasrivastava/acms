@@ -1,0 +1,30 @@
+# .github/workflows/dependency-check.yml
+name: Dependency Check
+
+on:
+  push:
+    paths:
+      - 'requirements.txt'
+      - 'setup.py'
+
+jobs:
+  check-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Check dependencies
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const deps = fs.readFileSync('requirements.txt', 'utf8');
+            
+            // Create issue if dependencies changed
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.name,
+              title: '📦 Dependencies Updated',
+              body: `Dependencies have been updated:\n\`\`\`\n${deps}\n\`\`\``,
+              labels: ['dependencies']
+            });
